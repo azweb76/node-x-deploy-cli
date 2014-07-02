@@ -1,0 +1,13 @@
+{
+    "id": "deploy-client",
+    "env": {
+        "development": "^.{2}[d]",
+        "test": "^.{2}[t]",
+        "staging": "^.{4}[s]",
+        "production": "^.{2}[pn]"
+    },
+	"deployApi": {
+		"url": "http://LTDV-DCLAY:9001",
+		"token": "zrHl59Qd3S2QTg5cD1YFJwf8NGA22NMA"
+	}
+}

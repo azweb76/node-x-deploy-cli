@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var config = require('x-config');
+var request = require('request');
+var path = require('path');
+var targz = require('tar.gz');
+var argv = require('optimist')
+    .usage('Usage: $0 [-api <api>] -path <path> -name <name> -version <version>')
+    .describe('name', 'Name of tarball file.')
+    .describe('api', 'URL to the deployment API.')
+    .describe('path', 'Path to extract files.')
+    .describe('version', 'Version of tarball file.')
+    .describe('apiToken', 'Auth token to deployment API.')
+    .describe('extract', 'Extract tarball.')
+    .alias('p', 'path')
+    .alias('x', 'extract')
+    .boolean(['x'])
+    .demand(['name', 'version'])
+    .default({ api: config.deployApi.url, apiToken: config.deployApi.token })
+    .argv;
+
+var rootUrl = argv.api;
+var tgzFile = path.join(argv.path, argv.name + '-' + argv.version + '.tgz');
+
+var packageUrl = rootUrl + 'artifact/' + argv.name + '/' + argv.version + '/tgz';
+request(packageUrl, { headers: { "X-AuthToken": argv.apiToken } }, function(err){
+    if (err) { console.log('error', err); }
+    if (argv.extract){
+        var compress = new targz().extract(tgzFile, argv.path, function(err){
+            if(err) { return console.log(err); }
+
+            fs.unlinkSync(tgzFile);
+            console.log('successfully downloaded and extracted artifact to ' + argv.path);
+        });
+    }
+    else {
+        console.log('successfully downloaded artifact to ' + tgzFile);
+    }
+}).pipe(fs.createWriteStream(tgzFile));
+        

@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var request = require('request');
+var targz = require('tar.gz');
+var config = require('x-config');
+var argv = require('optimist')
+    .usage('Usage: $0 [-api <api>] -path <path> -name <name> -version <version>')
+    .describe('name', 'Name of tarball file.')
+    .describe('api', 'URL to the deployment API.')
+    .describe('path', 'Path to tarball file (or directory is compress option is specified).')
+    .describe('version', 'Version of tarball file.')
+    .describe('apiToken', 'Auth token to deployment API.')
+    .describe('compress', 'Compress folder before upload.')
+    .alias('c', 'compress')
+    .alias('p', 'path')
+    .boolean(['c'])
+    .demand(['name', 'version'])
+    .default({ api: config.deployApi.url, apiToken: config.deployApi.token })
+    .argv;
+
+var rootUrl = argv.api;
+var tgzFile = argv.name + '-' + argv.version + '.tgz';
+
+var packageUrl = rootUrl + '/artifact/' + argv.name + '/' + argv.version;
+
+if (argv.compress){
+    var compress = new targz().compress(argv.path, tgzFile, function(err){
+        if(err) { return console.log(err); }
+
+        uploadFile(tgzFile);
+    });
+}
+else {
+    uploadFile(argv.path);
+}
+
+function uploadFile(file){
+    fs.createReadStream(file).pipe(
+        request.post(packageUrl, { headers: { "X-AuthToken": argv.apiToken } }, function(err, resp, body) {
+            if (err) throw err;
+            if (resp.statusCode === 200) {
+                console.error('successfully published version ' + argv.version
+                        + ' of ' + argv.name + ': ' + packageUrl + '/tgz');
+            } else {
+                console.error('uh oh, something unexpected happened ('
+                        + resp.statusCode + ':' + body + ')');
+            }
+        }));
+}
